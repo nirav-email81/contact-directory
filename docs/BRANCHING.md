@@ -66,14 +66,22 @@ git push origin v1.1.0
 
 ## Branch protection (recommended on GitHub)
 
-Configure in **Settings → Branches** for `master`:
+### Option 1 — GitHub CLI (after CI has run once on `master`)
 
-- Require pull request before merging
-- Require status check: **CI / compile** (and **CI summary**)
-- Require branches to be up to date
-- Do not allow bypassing (optional)
+```bash
+gh api repos/nirav-email81/contact-directory/branches/master/protection \
+  -X PUT --input .github/branch-protection-master.json
+```
 
-For `develop`:
+### Option 2 — GitHub website
 
-- Require PR for merges from feature branches (optional)
-- Require CI status check
+**Settings → Branches → Add rule** for `master`:
+
+- Require a pull request before merging
+- Require status checks: **CI summary**, **Compile (dev)**, **Compile (prod)**
+- Require branches to be up to date before merging
+
+For `develop` (optional):
+
+- Require PR for merges from feature branches
+- Require the same CI status checks
