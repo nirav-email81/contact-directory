@@ -1,5 +1,6 @@
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -17,14 +18,19 @@ import java.util.Set;
 
 /** SQLite persistence for contacts. */
 public final class ContactDatabase {
+    /** @deprecated use {@link #databasePath()} */
+    @Deprecated
     public static final String DB_FILE = "contacts.db";
-    public static final String LEGACY_FILE = "contacts.txt";
-    private static final String JDBC_URL = "jdbc:sqlite:" + DB_FILE;
 
     private ContactDatabase() {
     }
 
+    public static Path databasePath() {
+        return AppEnvironment.databasePath();
+    }
+
     public static void initialize() throws SQLException {
+        ensureDatabaseDirectory();
         try (Connection conn = connect();
              Statement stmt = conn.createStatement()) {
             stmt.execute("""
@@ -79,8 +85,20 @@ public final class ContactDatabase {
                         + "then start the app with run.bat (or add lib/sqlite-jdbc.jar to your IDE classpath).");
     }
 
+    private static void ensureDatabaseDirectory() throws SQLException {
+        Path dbPath = databasePath();
+        Path parent = dbPath.getParent();
+        if (parent != null && !Files.isDirectory(parent)) {
+            try {
+                Files.createDirectories(parent);
+            } catch (IOException e) {
+                throw new SQLException("Could not create database directory: " + parent, e);
+            }
+        }
+    }
+
     private static Connection connect() throws SQLException {
-        return DriverManager.getConnection(JDBC_URL);
+        return DriverManager.getConnection("jdbc:sqlite:" + databasePath());
     }
 
     private static void migrateSchema(Connection conn) throws SQLException {
@@ -175,7 +193,7 @@ public final class ContactDatabase {
     }
 
     private static void migrateFromTextFileIfNeeded() throws SQLException {
-        Path legacy = Paths.get(LEGACY_FILE);
+        Path legacy = AppEnvironment.legacyImportPath();
         if (!Files.exists(legacy)) {
             return;
         }
@@ -204,12 +222,12 @@ public final class ContactDatabase {
                             group));
                 }
             }
-            Path backup = Paths.get(LEGACY_FILE + ".bak");
+            Path backup = Paths.get(legacy.toString() + ".bak");
             Files.move(legacy, backup);
-            System.out.println("Migrated contacts from " + LEGACY_FILE + " to " + DB_FILE
+            System.out.println("Migrated contacts from " + legacy + " to " + databasePath()
                     + " (backup: " + backup + ")");
         } catch (Exception e) {
-            throw new SQLException("Failed to migrate " + LEGACY_FILE + ": " + e.getMessage(), e);
+            throw new SQLException("Failed to migrate " + legacy + ": " + e.getMessage(), e);
         }
     }
 

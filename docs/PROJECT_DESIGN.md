@@ -303,9 +303,22 @@ Menu options: (1) View all, (2) Add, (3) Search by name, (4) Exit. Same validati
 
 ---
 
-## 12. Document references
+## 12. Environments and deployment
+
+| Environment | Selector | Database |
+|-------------|----------|----------|
+| Development | `CONTACT_ENV=dev` (default) | `contacts-dev.db` |
+| Production | `CONTACT_ENV=prod` | `%LOCALAPPDATA%\ContactDirectory\contacts.db` |
+
+Configuration is loaded by `AppEnvironment` from `config/application-{env}.properties`. See `docs/ENVIRONMENTS.md` and `docs/CICD_OPTIONS.md`.
+
+---
+
+## 13. Document references
 
 | Document | Location |
 |----------|----------|
 | User guide / quick start | `README.md` |
 | Test cases | `docs/TEST_CASES.md` |
+| Dev / prod environments | `docs/ENVIRONMENTS.md` |
+| CI/CD options | `docs/CICD_OPTIONS.md` |

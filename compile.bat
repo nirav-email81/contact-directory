@@ -21,4 +21,6 @@ if not exist out mkdir out
 copy /Y "%JAR%" "out\sqlite-jdbc.jar" >nul
 javac -encoding UTF-8 -cp "%JAR%" -d out src\*.java
 if %ERRORLEVEL% NEQ 0 exit /b %ERRORLEVEL%
-echo Compiled successfully. Run: run.bat
+if not exist out\config mkdir out\config
+xcopy /E /I /Y config\*.properties out\config\ >nul
+echo Compiled successfully. Run: run-dev.bat or run-prod.bat

@@ -4,6 +4,9 @@ target/
 
 # Local database (user data)
 contacts.db
+contacts-dev.db
+contacts-dev.txt
+contacts-dev.txt.bak
 contacts.txt.bak
 
 # Python cache (if any tooling used)

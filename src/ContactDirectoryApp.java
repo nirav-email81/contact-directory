@@ -61,7 +61,7 @@ public class ContactDirectoryApp extends JFrame {
     private final JTable table = new JTable(tableModel);
 
     public ContactDirectoryApp() {
-        setTitle("Personal Contact Directory");
+        setTitle(AppEnvironment.windowTitle());
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
         setMinimumSize(new Dimension(800, 480));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

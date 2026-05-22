@@ -24,7 +24,13 @@ A Java Swing application to store, view, search, filter, and export contacts. Da
 
 ```bat
 compile.bat
-run.bat
+run-dev.bat
+```
+
+Production (separate database under your user profile):
+
+```bat
+run-prod.bat
 ```
 
 **Maven (optional):**
@@ -70,9 +76,34 @@ src/
   ContactCsv.java           - CSV parsing and formatting
   ContactDirectoryApp.java  - Swing GUI
   ContactDirectoryCli.java  - optional CLI
+  AppEnvironment.java       - dev/prod configuration
+config/
+  application-dev.properties
+  application-prod.properties
 pom.xml                     - Maven + sqlite-jdbc dependency
-contacts.db                 - database (created at runtime)
+contacts-dev.db             - dev database (created at runtime)
 ```
+
+## Environments
+
+| Environment | Run command | Database |
+|-------------|-------------|----------|
+| **Development** (default) | `run-dev.bat` | `contacts-dev.db` in project folder |
+| **Production** | `run-prod.bat` | `%LOCALAPPDATA%\ContactDirectory\contacts.db` |
+
+Set `CONTACT_ENV=dev` or `CONTACT_ENV=prod`, or pass `-Dcontact.env=prod`. See [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
+
+Maven: `mvn compile -Pdev` or `mvn package -Pprod`.
+
+## CI/CD
+
+GitHub Actions workflows build on every push/PR and publish a JAR when you push a version tag (`v1.0.0`).
+
+| Document / file | Description |
+|-----------------|-------------|
+| [docs/CICD_OPTIONS.md](docs/CICD_OPTIONS.md) | GitHub Actions, GitLab, Azure DevOps, Jenkins comparison |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | Compile dev + prod profiles |
+| [.github/workflows/release.yml](.github/workflows/release.yml) | Release JAR on tag |
 
 ## Documentation
 
@@ -80,6 +111,8 @@ contacts.db                 - database (created at runtime)
 |----------|-------------|
 | [docs/PROJECT_DESIGN.md](docs/PROJECT_DESIGN.md) | Architecture, data model, workflows, UI design |
 | [docs/TEST_CASES.md](docs/TEST_CASES.md) | Manual test cases and sample CSV data |
+| [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md) | Development vs production setup |
+| [docs/CICD_OPTIONS.md](docs/CICD_OPTIONS.md) | CI/CD platform options |
 
 ## GUI layout
 
