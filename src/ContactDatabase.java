@@ -11,7 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** SQLite persistence for contacts. */
 public final class ContactDatabase {
@@ -31,9 +33,13 @@ public final class ContactDatabase {
                     name TEXT NOT NULL,
                     phone TEXT NOT NULL DEFAULT '',
                     email TEXT NOT NULL DEFAULT '',
-                    group_name TEXT NOT NULL DEFAULT 'Friends'
+                    group_name TEXT NOT NULL DEFAULT 'Friends',
+                    department TEXT NOT NULL DEFAULT '',
+                    organization TEXT NOT NULL DEFAULT '',
+                    phone_extension TEXT NOT NULL DEFAULT ''
                 )
                 """);
+            migrateSchema(conn);
         }
         migrateFromTextFileIfNeeded();
     }
@@ -77,9 +83,37 @@ public final class ContactDatabase {
         return DriverManager.getConnection(JDBC_URL);
     }
 
+    private static void migrateSchema(Connection conn) throws SQLException {
+        Set<String> columns = new HashSet<>();
+        try (Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("PRAGMA table_info(contacts)")) {
+            while (rs.next()) {
+                columns.add(rs.getString("name").toLowerCase());
+            }
+        }
+        if (!columns.contains("department")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE contacts ADD COLUMN department TEXT NOT NULL DEFAULT ''");
+            }
+        }
+        if (!columns.contains("organization")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE contacts ADD COLUMN organization TEXT NOT NULL DEFAULT ''");
+            }
+        }
+        if (!columns.contains("phone_extension")) {
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("ALTER TABLE contacts ADD COLUMN phone_extension TEXT NOT NULL DEFAULT ''");
+            }
+        }
+    }
+
     public static List<Contact> findAll() throws SQLException {
         List<Contact> contacts = new ArrayList<>();
-        String sql = "SELECT id, name, phone, email, group_name FROM contacts ORDER BY name COLLATE NOCASE";
+        String sql = """
+            SELECT id, name, phone, email, group_name, department, organization, phone_extension
+            FROM contacts ORDER BY name COLLATE NOCASE
+            """;
 
         try (Connection conn = connect();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -92,14 +126,14 @@ public final class ContactDatabase {
     }
 
     public static int insert(Contact contact) throws SQLException {
-        String sql = "INSERT INTO contacts (name, phone, email, group_name) VALUES (?, ?, ?, ?)";
+        String sql = """
+            INSERT INTO contacts (name, phone, email, group_name, department, organization, phone_extension)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """;
 
         try (Connection conn = connect();
              PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            ps.setString(1, contact.getName());
-            ps.setString(2, contact.getPhone());
-            ps.setString(3, contact.getEmail());
-            ps.setString(4, contact.getGroup());
+            bindContact(ps, contact);
             ps.executeUpdate();
 
             try (ResultSet keys = ps.getGeneratedKeys()) {
@@ -114,22 +148,30 @@ public final class ContactDatabase {
     public static void update(Contact contact) throws SQLException {
         String sql = """
             UPDATE contacts
-            SET name = ?, phone = ?, email = ?, group_name = ?
+            SET name = ?, phone = ?, email = ?, group_name = ?,
+                department = ?, organization = ?, phone_extension = ?
             WHERE id = ?
             """;
 
         try (Connection conn = connect();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, contact.getName());
-            ps.setString(2, contact.getPhone());
-            ps.setString(3, contact.getEmail());
-            ps.setString(4, contact.getGroup());
-            ps.setInt(5, contact.getId());
+            bindContact(ps, contact);
+            ps.setInt(8, contact.getId());
             int rows = ps.executeUpdate();
             if (rows == 0) {
                 throw new SQLException("No contact found with id " + contact.getId());
             }
         }
+    }
+
+    private static void bindContact(PreparedStatement ps, Contact contact) throws SQLException {
+        ps.setString(1, contact.getName());
+        ps.setString(2, contact.getPhone());
+        ps.setString(3, contact.getEmail());
+        ps.setString(4, contact.getGroup());
+        ps.setString(5, contact.getDepartment());
+        ps.setString(6, contact.getOrganization());
+        ps.setString(7, contact.getExtension());
     }
 
     private static void migrateFromTextFileIfNeeded() throws SQLException {
@@ -177,6 +219,9 @@ public final class ContactDatabase {
                 rs.getString("name"),
                 rs.getString("phone"),
                 rs.getString("email"),
-                rs.getString("group_name"));
+                rs.getString("group_name"),
+                rs.getString("department"),
+                rs.getString("organization"),
+                rs.getString("phone_extension"));
     }
 }

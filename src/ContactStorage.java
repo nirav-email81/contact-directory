@@ -4,10 +4,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Facade for contact persistence (SQLite) and CSV export. */
+/** Facade for contact persistence (SQLite) and CSV import/export. */
 public final class ContactStorage {
     public static final String DEFAULT_GROUP = "Friends";
     public static final List<String> CONTACT_GROUPS =
@@ -44,25 +45,48 @@ public final class ContactStorage {
 
     public static void exportCsv(List<Contact> contacts, Path filepath) throws IOException {
         try (BufferedWriter writer = Files.newBufferedWriter(filepath, StandardCharsets.UTF_8)) {
-            writer.write("Name,Phone,Email,Group");
+            writer.write(ContactCsv.headerLine());
             writer.newLine();
             for (Contact c : contacts) {
-                writer.write(escapeCsv(c.getName()) + ","
-                        + escapeCsv(c.getPhone()) + ","
-                        + escapeCsv(c.getEmail()) + ","
-                        + escapeCsv(c.getGroup()));
+                writer.write(ContactCsv.toRow(c));
                 writer.newLine();
             }
         }
     }
 
-    private static String escapeCsv(String value) {
-        if (value == null) {
-            return "";
+    public static ImportResult importCsv(Path filepath) throws IOException, SQLException {
+        ensureInitialized();
+        List<ContactCsv.ParsedRow> rows = ContactCsv.parseFile(filepath);
+        int imported = 0;
+        int skipped = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (ContactCsv.ParsedRow row : rows) {
+            Contact contact = row.contact();
+            if (contact.getName().isEmpty()) {
+                skipped++;
+                errors.add("Line " + row.lineNumber() + ": name is required.");
+                continue;
+            }
+
+            String validationError = ContactValidator.validate(
+                    contact.getPhone(), contact.getEmail(), contact.getExtension());
+            if (validationError != null) {
+                skipped++;
+                errors.add("Line " + row.lineNumber() + ": " + validationError);
+                continue;
+            }
+
+            insert(contact);
+            imported++;
         }
-        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
-            return "\"" + value.replace("\"", "\"\"") + "\"";
+
+        return new ImportResult(imported, skipped, errors);
+    }
+
+    public record ImportResult(int imported, int skipped, List<String> errors) {
+        public boolean hasErrors() {
+            return !errors.isEmpty();
         }
-        return value;
     }
 }

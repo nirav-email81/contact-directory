@@ -4,11 +4,13 @@ A Java Swing application to store, view, search, filter, and export contacts. Da
 
 ## Features
 
-- **View All Contacts** — Table with Name, Phone, Email, and Group
+- **View All Contacts** — Table with name, phone, extension, email, department, organization, and group
 - **Add / Update Contact** — Sidebar fields with validation; double-click a row to edit
 - **Search Contacts** — Filter by name (partial match)
 - **Filter by Group** — Work, Family, Friends
-- **Input validation** — Phone cannot contain letters; email must include `@`
+- **Sort contacts** — Name, group, email, phone, department, or organization
+- **Input validation** — Phone cannot contain letters; email must include `@`; extension allows digits and `x`
+- **Import CSV** — Load contacts from a `.csv` file (supports old 4-column exports and the new 7-column format)
 - **Export CSV** — Save to `.csv` for Excel or Google Sheets
 - **SQLite database** — Persistent storage in `contacts.db`
 
@@ -51,7 +53,9 @@ java -jar target/contact-directory-1.0.0.jar
 ## Database
 
 - **File:** `contacts.db` (SQLite, created automatically)
-- **Table:** `contacts` — `id`, `name`, `phone`, `email`, `group_name`
+- **Table:** `contacts` — `id`, `name`, `phone`, `email`, `group_name`, `department`, `organization`, `phone_extension`
+
+**CSV columns (import/export):** Name, Phone, Extension, Email, Department, Organization, Group
 
 On first run, if `contacts.txt` exists and the database is empty, records are imported into the database and the text file is renamed to `contacts.txt.bak`.
 
@@ -62,16 +66,24 @@ src/
   Contact.java
   ContactValidator.java
   ContactDatabase.java      - SQLite JDBC layer
-  ContactStorage.java       - facade + CSV export
+  ContactStorage.java       - facade + CSV import/export
+  ContactCsv.java           - CSV parsing and formatting
   ContactDirectoryApp.java  - Swing GUI
   ContactDirectoryCli.java  - optional CLI
 pom.xml                     - Maven + sqlite-jdbc dependency
 contacts.db                 - database (created at runtime)
 ```
 
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/PROJECT_DESIGN.md](docs/PROJECT_DESIGN.md) | Architecture, data model, workflows, UI design |
+| [docs/TEST_CASES.md](docs/TEST_CASES.md) | Manual test cases and sample CSV data |
+
 ## GUI layout
 
-- Fixed **600×480** window
-- **Left sidebar**: inputs, group dropdown, Add/Update & Clear, group filter, search, Export CSV
-- **Right pane**: contact table
+- Default **980×560** window (resizable)
+- **Left sidebar** (scrollable): contact form, filter, sort, search, Import/Export CSV
+- **Right pane**: scrollable contact table (7 columns)
 - **Double-click** a row to load that contact for editing

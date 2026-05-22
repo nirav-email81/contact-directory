@@ -9,6 +9,7 @@ import java.awt.Insets;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import javax.swing.BorderFactory;
@@ -26,22 +27,30 @@ import javax.swing.table.DefaultTableModel;
 
 /** Swing GUI: sidebar inputs + contact table. */
 public class ContactDirectoryApp extends JFrame {
-    private static final int WINDOW_WIDTH = 600;
-    private static final int WINDOW_HEIGHT = 480;
-    private static final String[] TABLE_COLUMNS = {"Name", "Phone", "Email", "Group"};
+    private static final int WINDOW_WIDTH = 980;
+    private static final int WINDOW_HEIGHT = 560;
+    private static final String[] TABLE_COLUMNS = {
+            "Name", "Phone", "Ext.", "Email", "Department", "Organization", "Group"
+    };
 
     private final List<Contact> contacts = new ArrayList<>();
     private final List<Integer> displayedIds = new ArrayList<>();
     private Integer editingId = null;
 
-    private final JTextField nameField = new JTextField(18);
-    private final JTextField phoneField = new JTextField(18);
-    private final JTextField emailField = new JTextField(18);
-    private final JTextField searchField = new JTextField(18);
+    private final JTextField nameField = new JTextField(16);
+    private final JTextField phoneField = new JTextField(16);
+    private final JTextField extensionField = new JTextField(16);
+    private final JTextField emailField = new JTextField(16);
+    private final JTextField departmentField = new JTextField(16);
+    private final JTextField organizationField = new JTextField(16);
+    private final JTextField searchField = new JTextField(16);
     private final JComboBox<String> groupCombo = new JComboBox<>(
             ContactStorage.CONTACT_GROUPS.toArray(new String[0]));
     private final JComboBox<String> filterCombo = new JComboBox<>(
             new String[]{"All", "Work", "Family", "Friends"});
+    private final JComboBox<String> sortCombo = new JComboBox<>(
+            new String[]{"Name (A-Z)", "Name (Z-A)", "Group (A-Z)", "Group (Z-A)",
+                    "Email (A-Z)", "Phone (A-Z)", "Department (A-Z)", "Organization (A-Z)"});
     private final JButton saveButton = new JButton("Add");
     private final DefaultTableModel tableModel = new DefaultTableModel(TABLE_COLUMNS, 0) {
         @Override
@@ -54,7 +63,7 @@ public class ContactDirectoryApp extends JFrame {
     public ContactDirectoryApp() {
         setTitle("Personal Contact Directory");
         setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
-        setResizable(false);
+        setMinimumSize(new Dimension(800, 480));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
@@ -78,9 +87,8 @@ public class ContactDirectoryApp extends JFrame {
         setContentPane(main);
     }
 
-    private JPanel buildSidebar() {
+    private JScrollPane buildSidebar() {
         JPanel sidebar = new JPanel(new GridBagLayout());
-        sidebar.setPreferredSize(new Dimension(220, WINDOW_HEIGHT));
         sidebar.setBackground(new Color(0xF0F0F0));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -99,7 +107,10 @@ public class ContactDirectoryApp extends JFrame {
         gbc.insets = new Insets(2, 12, 2, 12);
         row = addField(sidebar, gbc, row, "Name", nameField);
         row = addField(sidebar, gbc, row, "Phone", phoneField);
+        row = addField(sidebar, gbc, row, "Extension", extensionField);
         row = addField(sidebar, gbc, row, "Email", emailField);
+        row = addField(sidebar, gbc, row, "Department", departmentField);
+        row = addField(sidebar, gbc, row, "Organization", organizationField);
 
         gbc.gridy = row++;
         sidebar.add(new JLabel("Group"), gbc);
@@ -128,6 +139,17 @@ public class ContactDirectoryApp extends JFrame {
         sidebar.add(filterCombo, gbc);
 
         gbc.gridy = row++;
+        gbc.insets = new Insets(10, 12, 4, 12);
+        JLabel sortTitle = new JLabel("Sort by");
+        sortTitle.setFont(sortTitle.getFont().deriveFont(Font.BOLD, 11f));
+        sidebar.add(sortTitle, gbc);
+
+        gbc.gridy = row++;
+        gbc.insets = new Insets(2, 12, 2, 12);
+        sortCombo.addActionListener(e -> applyFilters());
+        sidebar.add(sortCombo, gbc);
+
+        gbc.gridy = row++;
         gbc.insets = new Insets(8, 12, 4, 12);
         JLabel searchTitle = new JLabel("Search");
         searchTitle.setFont(searchTitle.getFont().deriveFont(Font.BOLD, 11f));
@@ -148,9 +170,15 @@ public class ContactDirectoryApp extends JFrame {
         sidebar.add(searchRow, gbc);
 
         gbc.gridy = row++;
+        JPanel ioRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        ioRow.setOpaque(false);
+        JButton importBtn = new JButton("Import CSV");
+        importBtn.addActionListener(e -> importCsv());
+        ioRow.add(importBtn);
         JButton exportBtn = new JButton("Export CSV");
         exportBtn.addActionListener(e -> exportCsv());
-        sidebar.add(exportBtn, gbc);
+        ioRow.add(exportBtn);
+        sidebar.add(ioRow, gbc);
 
         gbc.gridy = row++;
         gbc.weighty = 1;
@@ -158,7 +186,11 @@ public class ContactDirectoryApp extends JFrame {
         hint.setForeground(new Color(0x555555));
         sidebar.add(hint, gbc);
 
-        return sidebar;
+        JScrollPane scroll = new JScrollPane(sidebar);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setPreferredSize(new Dimension(250, WINDOW_HEIGHT));
+        scroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        return scroll;
     }
 
     private int addField(JPanel panel, GridBagConstraints gbc, int row, String label, JTextField field) {
@@ -179,10 +211,14 @@ public class ContactDirectoryApp extends JFrame {
         content.add(tableTitle, BorderLayout.NORTH);
 
         table.setRowHeight(22);
-        table.getColumnModel().getColumn(0).setPreferredWidth(110);
-        table.getColumnModel().getColumn(1).setPreferredWidth(95);
-        table.getColumnModel().getColumn(2).setPreferredWidth(130);
-        table.getColumnModel().getColumn(3).setPreferredWidth(70);
+        table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        table.getColumnModel().getColumn(0).setPreferredWidth(100);
+        table.getColumnModel().getColumn(1).setPreferredWidth(90);
+        table.getColumnModel().getColumn(2).setPreferredWidth(45);
+        table.getColumnModel().getColumn(3).setPreferredWidth(130);
+        table.getColumnModel().getColumn(4).setPreferredWidth(90);
+        table.getColumnModel().getColumn(5).setPreferredWidth(100);
+        table.getColumnModel().getColumn(6).setPreferredWidth(65);
         table.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
@@ -217,20 +253,57 @@ public class ContactDirectoryApp extends JFrame {
         for (Contact c : displayed) {
             displayedIds.add(c.getId());
             tableModel.addRow(new Object[]{
-                    c.getName(), c.getPhone(), c.getEmail(), c.getGroup()
+                    c.getName(), c.getPhone(), c.getExtension(), c.getEmail(),
+                    c.getDepartment(), c.getOrganization(), c.getGroup()
             });
         }
     }
 
-    private void applyFilters() {
+    private List<Contact> buildDisplayedList() {
         String groupFilter = (String) filterCombo.getSelectedItem();
+        String query = searchField.getText().trim().toLowerCase();
         List<Contact> displayed = new ArrayList<>();
         for (Contact c : contacts) {
-            if ("All".equals(groupFilter) || c.getGroup().equals(groupFilter)) {
-                displayed.add(c);
+            if (!"All".equals(groupFilter) && !c.getGroup().equals(groupFilter)) {
+                continue;
             }
+            if (!query.isEmpty() && !c.getName().toLowerCase().contains(query)) {
+                continue;
+            }
+            displayed.add(c);
         }
-        refreshTable(displayed);
+        sortContacts(displayed);
+        return displayed;
+    }
+
+    private void sortContacts(List<Contact> list) {
+        String sortBy = (String) sortCombo.getSelectedItem();
+        if (sortBy == null) {
+            sortBy = "Name (A-Z)";
+        }
+        Comparator<Contact> comparator = switch (sortBy) {
+            case "Name (Z-A)" -> Comparator.comparing(Contact::getName, String.CASE_INSENSITIVE_ORDER)
+                    .reversed();
+            case "Group (A-Z)" -> Comparator.comparing(Contact::getGroup, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            case "Group (Z-A)" -> Comparator.comparing(Contact::getGroup, String.CASE_INSENSITIVE_ORDER)
+                    .reversed()
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            case "Email (A-Z)" -> Comparator.comparing(Contact::getEmail, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            case "Phone (A-Z)" -> Comparator.comparing(Contact::getPhone, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            case "Department (A-Z)" -> Comparator.comparing(Contact::getDepartment, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            case "Organization (A-Z)" -> Comparator.comparing(Contact::getOrganization, String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparing(Contact::getName, String.CASE_INSENSITIVE_ORDER);
+        };
+        list.sort(comparator);
+    }
+
+    private void applyFilters() {
+        refreshTable(buildDisplayedList());
     }
 
     private void clearForm() {
@@ -238,7 +311,10 @@ public class ContactDirectoryApp extends JFrame {
         saveButton.setText("Add");
         nameField.setText("");
         phoneField.setText("");
+        extensionField.setText("");
         emailField.setText("");
+        departmentField.setText("");
+        organizationField.setText("");
         groupCombo.setSelectedItem(ContactStorage.DEFAULT_GROUP);
     }
 
@@ -251,7 +327,10 @@ public class ContactDirectoryApp extends JFrame {
                 nameField.getText().trim(),
                 phoneField.getText().trim(),
                 emailField.getText().trim(),
-                group);
+                group,
+                departmentField.getText().trim(),
+                organizationField.getText().trim(),
+                extensionField.getText().trim());
     }
 
     private void saveContact() {
@@ -262,7 +341,7 @@ public class ContactDirectoryApp extends JFrame {
             return;
         }
 
-        String error = ContactValidator.validate(data.getPhone(), data.getEmail());
+        String error = ContactValidator.validate(data.getPhone(), data.getEmail(), data.getExtension());
         if (error != null) {
             JOptionPane.showMessageDialog(this, error,
                     "Validation Error", JOptionPane.ERROR_MESSAGE);
@@ -317,25 +396,21 @@ public class ContactDirectoryApp extends JFrame {
         saveButton.setText("Update");
         nameField.setText(c.getName());
         phoneField.setText(c.getPhone());
+        extensionField.setText(c.getExtension());
         emailField.setText(c.getEmail());
+        departmentField.setText(c.getDepartment());
+        organizationField.setText(c.getOrganization());
         groupCombo.setSelectedItem(c.getGroup());
     }
 
     private void searchContacts() {
-        String query = searchField.getText().trim().toLowerCase();
-        String groupFilter = (String) filterCombo.getSelectedItem();
-
-        List<Contact> matches = new ArrayList<>();
-        for (Contact c : contacts) {
-            if (!"All".equals(groupFilter) && !c.getGroup().equals(groupFilter)) {
-                continue;
-            }
-            if (!query.isEmpty() && !c.getName().toLowerCase().contains(query)) {
-                continue;
-            }
-            matches.add(c);
+        if (searchField.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter a name to search.",
+                    "Search", JOptionPane.WARNING_MESSAGE);
+            return;
         }
 
+        List<Contact> matches = buildDisplayedList();
         if (matches.isEmpty()) {
             JOptionPane.showMessageDialog(this, "No contacts match your search.",
                     "Search", JOptionPane.INFORMATION_MESSAGE);
@@ -349,6 +424,44 @@ public class ContactDirectoryApp extends JFrame {
         searchField.setText("");
         filterCombo.setSelectedItem("All");
         applyFilters();
+    }
+
+    private void importCsv() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Import Contacts");
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        Path path = chooser.getSelectedFile().toPath();
+        try {
+            ContactStorage.ImportResult result = ContactStorage.importCsv(path);
+            reloadContacts();
+            applyFilters();
+
+            StringBuilder message = new StringBuilder();
+            message.append("Imported ").append(result.imported()).append(" contact(s).");
+            if (result.skipped() > 0) {
+                message.append("\nSkipped ").append(result.skipped()).append(" row(s).");
+            }
+            if (result.hasErrors()) {
+                message.append("\n\n");
+                int limit = Math.min(result.errors().size(), 8);
+                for (int i = 0; i < limit; i++) {
+                    message.append(result.errors().get(i)).append('\n');
+                }
+                if (result.errors().size() > limit) {
+                    message.append("... and ").append(result.errors().size() - limit).append(" more.");
+                }
+            }
+
+            int type = result.imported() > 0 ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.WARNING_MESSAGE;
+            JOptionPane.showMessageDialog(this, message.toString(), "Import", type);
+        } catch (java.io.IOException | SQLException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Could not import file:\n" + e.getMessage(),
+                    "Import Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void exportCsv() {

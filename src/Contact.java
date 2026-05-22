@@ -5,18 +5,34 @@ public class Contact {
     private String phone;
     private String email;
     private String group;
+    private String department;
+    private String organization;
+    private String extension;
 
     /** New contact (not yet stored in the database). */
     public Contact(String name, String phone, String email, String group) {
-        this(0, name, phone, email, group);
+        this(name, phone, email, group, "", "", "");
+    }
+
+    public Contact(String name, String phone, String email, String group,
+                   String department, String organization, String extension) {
+        this(0, name, phone, email, group, department, organization, extension);
     }
 
     public Contact(int id, String name, String phone, String email, String group) {
+        this(id, name, phone, email, group, "", "", "");
+    }
+
+    public Contact(int id, String name, String phone, String email, String group,
+                   String department, String organization, String extension) {
         this.id = id;
-        this.name = name;
-        this.phone = phone;
-        this.email = email;
-        this.group = group;
+        this.name = name != null ? name : "";
+        this.phone = phone != null ? phone : "";
+        this.email = email != null ? email : "";
+        this.group = group != null ? group : "";
+        this.department = department != null ? department : "";
+        this.organization = organization != null ? organization : "";
+        this.extension = extension != null ? extension : "";
     }
 
     public int getId() {
@@ -57,5 +73,29 @@ public class Contact {
 
     public void setGroup(String group) {
         this.group = group;
+    }
+
+    public String getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(String department) {
+        this.department = department;
+    }
+
+    public String getOrganization() {
+        return organization;
+    }
+
+    public void setOrganization(String organization) {
+        this.organization = organization;
+    }
+
+    public String getExtension() {
+        return extension;
+    }
+
+    public void setExtension(String extension) {
+        this.extension = extension;
     }
 }

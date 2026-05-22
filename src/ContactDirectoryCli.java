@@ -60,7 +60,16 @@ public final class ContactDirectoryCli {
             Contact c = contacts.get(i);
             System.out.printf("%n  [%d] %s (%s)%n", i + 1, c.getName(), c.getGroup());
             System.out.printf("      Phone: %s%n", c.getPhone());
+            if (!c.getExtension().isEmpty()) {
+                System.out.printf("      Extension: %s%n", c.getExtension());
+            }
             System.out.printf("      Email: %s%n", c.getEmail());
+            if (!c.getDepartment().isEmpty()) {
+                System.out.printf("      Department: %s%n", c.getDepartment());
+            }
+            if (!c.getOrganization().isEmpty()) {
+                System.out.printf("      Organization: %s%n", c.getOrganization());
+            }
         }
         System.out.println("\n" + "=".repeat(50) + "\n");
     }
@@ -75,10 +84,16 @@ public final class ContactDirectoryCli {
         }
         System.out.print("  Phone: ");
         String phone = scanner.nextLine().trim();
+        System.out.print("  Extension: ");
+        String extension = scanner.nextLine().trim();
         System.out.print("  Email: ");
         String email = scanner.nextLine().trim();
+        System.out.print("  Department: ");
+        String department = scanner.nextLine().trim();
+        System.out.print("  Organization: ");
+        String organization = scanner.nextLine().trim();
 
-        String error = ContactValidator.validate(phone, email);
+        String error = ContactValidator.validate(phone, email, extension);
         if (error != null) {
             System.out.println("  " + error + "\n");
             return;
@@ -95,7 +110,7 @@ public final class ContactDirectoryCli {
         }
 
         try {
-            ContactStorage.insert(new Contact(name, phone, email, group));
+            ContactStorage.insert(new Contact(name, phone, email, group, department, organization, extension));
             reload(contacts);
             System.out.printf("%n  Contact '%s' added and saved.%n%n", name);
         } catch (SQLException e) {
@@ -133,7 +148,16 @@ public final class ContactDirectoryCli {
         for (Contact c : matches) {
             System.out.printf("%n  Name:  %s (%s)%n", c.getName(), c.getGroup());
             System.out.printf("  Phone: %s%n", c.getPhone());
+            if (!c.getExtension().isEmpty()) {
+                System.out.printf("  Extension: %s%n", c.getExtension());
+            }
             System.out.printf("  Email: %s%n", c.getEmail());
+            if (!c.getDepartment().isEmpty()) {
+                System.out.printf("  Department: %s%n", c.getDepartment());
+            }
+            if (!c.getOrganization().isEmpty()) {
+                System.out.printf("  Organization: %s%n", c.getOrganization());
+            }
         }
         System.out.println("\n" + "-".repeat(50) + "\n");
     }
