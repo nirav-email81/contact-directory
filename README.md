@@ -95,15 +95,25 @@ Set `CONTACT_ENV=dev` or `CONTACT_ENV=prod`, or pass `-Dcontact.env=prod`. See [
 
 Maven: `mvn compile -Pdev` or `mvn package -Pprod`.
 
+## Branches
+
+| Branch | Purpose |
+|--------|---------|
+| **`develop`** | Daily development and integration |
+| **`master`** | Production-ready releases |
+
+See [docs/BRANCHING.md](docs/BRANCHING.md) for the full Git flow.
+
 ## CI/CD
 
-GitHub Actions workflows build on every push/PR and publish a JAR when you push a version tag (`v1.0.0`).
+GitHub Actions run on every push/PR to `develop` or `master`. Pushing a tag `v1.0.0` on `master` creates a GitHub Release with the production JAR and ZIP bundle.
 
 | Document / file | Description |
 |-----------------|-------------|
+| [docs/BRANCHING.md](docs/BRANCHING.md) | Branch strategy and protection |
 | [docs/CICD_OPTIONS.md](docs/CICD_OPTIONS.md) | GitHub Actions, GitLab, Azure DevOps, Jenkins comparison |
-| [.github/workflows/ci.yml](.github/workflows/ci.yml) | Compile dev + prod profiles |
-| [.github/workflows/release.yml](.github/workflows/release.yml) | Release JAR on tag |
+| [.github/workflows/ci.yml](.github/workflows/ci.yml) | Compile dev + prod; package JAR on `master` |
+| [.github/workflows/release.yml](.github/workflows/release.yml) | Release JAR + ZIP on tag |
 
 ## Documentation
 

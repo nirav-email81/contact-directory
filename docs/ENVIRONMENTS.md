@@ -97,14 +97,16 @@ Implementation class: `AppEnvironment.java`.
 | Branch | Environment | Usage |
 |--------|-------------|--------|
 | `develop` | Development | Feature work, integration |
-| `main` | Production | Stable releases only |
-| Tags `v*` | Production release | CI builds installer/JAR |
+| `master` | Production | Stable releases only |
+| Tags `v*` | Production release | CI builds JAR + ZIP (from `master` only) |
 
 **Workflow**
 
 1. Develop on `develop` → run with `run-dev.bat`.
-2. Merge to `main` via pull request after review and CI pass.
-3. Tag `v1.1.0` on `main` → CI produces release artifact.
+2. Merge to `master` via pull request after review and CI pass.
+3. Tag `v1.1.0` on `master` → CI produces release artifact.
+
+Details: [BRANCHING.md](BRANCHING.md).
 4. Distribute production JAR/installer; users run with `CONTACT_ENV=prod` (embedded in `run-prod.bat`).
 
 ---
